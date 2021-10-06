@@ -2,7 +2,7 @@ package com.qwert.awstest.profile;
 
 import java.io.IOException;
 import java.util.*;
-import java.util.UUID;
+
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -18,41 +18,39 @@ import com.qwert.awstest.filestore.FileStore;
 @Service
 public class UserProfileService {
 	
-	private final UserProfileDataAccessService userProfileDataAccessService;
+	
 	private final FileStore fileStore;
 	
 	@Autowired
-	public UserProfileService(UserProfileDataAccessService userProfileDataAccessService, FileStore fileStore) {
+	public UserProfileService(FileStore fileStore) {
 		super();
-		this.userProfileDataAccessService = userProfileDataAccessService;
+		
 		this.fileStore = fileStore;
 	}
 	
-	List<UserProfile> getUserProfiles(){
-		return userProfileDataAccessService.getUserProfiles();
-	}
+	
 
 	
 
-	public void uploadUserProfileImage(UUID userProfileId, MultipartFile file) {
+	public void uploadUserProfileImage(String userProfileId, MultipartFile file) {
 		// 1. Check if image is not empty
         isFileEmpty(file);
         // 2. If file is an image
         isImage(file);
 
         // 3. The user exists in our database
-        UserProfile user = getUserProfileOrThrow(userProfileId);
+       // UserProfile user = getUserProfileOrThrow(userProfileId);
 
         // 4. Grab some metadata from file if any
         Map<String, String> metadata = extractMetadata(file);
 
         // 5. Store the image in s3 and update database (userProfileImageLink) with s3 image link
-        String path = String.format("%s/%s", BucketName.PROFILE_IMAGE.getBucketName(), user.getUserProfileId());
-        String filename = String.format("%s-%s", file.getOriginalFilename(), UUID.randomUUID());
+        String path = String.format("%s/%s", BucketName.PROFILE_IMAGE.getBucketName(), userProfileId);
+        String filename = String.format("%s_profile_picture", userProfileId);
 
         try {
             fileStore.save(path, filename, Optional.of(metadata), file.getInputStream());
-            user.setUserProfileImageLink(filename);
+           
         } catch (IOException e) {
             throw new IllegalStateException(e);
         }
@@ -66,14 +64,7 @@ public class UserProfileService {
 	        return metadata;
 	    }
 
-	    private UserProfile getUserProfileOrThrow(UUID userProfileId) {
-	        return userProfileDataAccessService
-	                .getUserProfiles()
-	                .stream()
-	                .filter(userProfile -> userProfile.getUserProfileId().equals(userProfileId))
-	                .findFirst()
-	                .orElseThrow(() -> new IllegalStateException(String.format("User profile %s not found", userProfileId)));
-	    }
+	    
 
 	    private void isImage(MultipartFile file) {
 	        if (!Arrays.asList(
@@ -90,15 +81,14 @@ public class UserProfileService {
 	        }
 	    }
 
-		public byte[] downloadUserProfileImage(UUID userProfileId) {
-			 UserProfile user = getUserProfileOrThrow(userProfileId);
+		public byte[] downloadUserProfileImage(String userProfileId) {
+			 
 
 		        String path = String.format("%s/%s",
 		                BucketName.PROFILE_IMAGE.getBucketName(),
-		                user.getUserProfileId());
+		                userProfileId);
 
-		        return user.getUserProfileImageLink()
-		                .map(key -> fileStore.download(path, key))
-		                .orElse(new byte[0]);
+		        return fileStore.download(path, String.format("%s_profile_picture", userProfileId));
+		                
 		}
 }

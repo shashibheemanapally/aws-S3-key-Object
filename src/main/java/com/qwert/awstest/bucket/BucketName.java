@@ -1,7 +1,7 @@
 package com.qwert.awstest.bucket;
 
 public enum BucketName {
-	PROFILE_IMAGE("image-upload-test-qwert");
+	PROFILE_IMAGE("profile-image-store-stockbasket");
 	
 	private final String bucketName;
 
